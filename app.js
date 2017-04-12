@@ -1,18 +1,19 @@
 
-
 var margin = {top: 20, right: 30, bottom: 30, left: 80},
 	width = 960 - margin.left - margin.right,
 	height = 500 - margin.top - margin.bottom;
 
-var x = d3.scaleTime()
-
-var y = d3.scaleLinear()
-    .range([height, 0], .1);
-
-var xAxis = d3.axisBottom(x)
-var yAxis = d3.axisLeft(y)
+var xScale = d3.scaleTime()
+    .range([0, width])
+var yScale = d3.scaleLinear()
+    .range([height, 0]);
+var xAxis = d3.axisBottom(xScale)
+    .ticks(10);
+var yAxis = d3.axisLeft(yScale)
 	.ticks(10);
+
 var parseTime = d3.timeParse("%Y-%m-%d")
+//select svg and add width and height to it
 var chart = d3.select(".chart")
 	.attr("width", width + margin.left + margin.right)
 	.attr("height",height + margin.top + margin.bottom)
@@ -23,44 +24,36 @@ var url = "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/m
 
 d3.json(url, function response (econData) { 
 	var gdp = econData.data.map((data)=>data);
-	console.log(gdp)
-	y.domain([0, d3.max(gdp, function(d) { return d[1]; })]);
-	x.range([d3.min(gdp, function(d) { return d[0]; }), d3.max(gdp,function(d){ return d[1]; })]);	
-	chart.append("g")
+	var gdp = gdp.map((month)=>[parseTime(month[0]), month[1]])
+    console.log(gdp)
+    var xMin = d3.min(gdp, function(d) { return d[0]; })
+    var xMax = d3.max(gdp, function(d) { return d[0]; })
+	yScale.domain([0, d3.max(gdp, function(d) { return d[1]; })]);
+    xScale.domain(d3.extent(gdp, function(d) { return d[0]; }));
+    
+    //add axis
+    chart.append("g")
 		.attr("class", "x axis")
 		.attr("transform", "translate(0," + height + ")")
 		.call(xAxis)
-	  .append("text")
-		.attr("x", 6)
-		.attr("dy", ".71")
-		.style("text-anchor", "end")
-		.text("time");
+      .select(".domain")
+        .remove();
 	chart.append("g")
 		.attr("class", "y axis")
+		.attr("transform", "translate(0,0)")
 		.call(yAxis)
-	  .append("text")
-		.attr("transform", "rotate(-90)")
-		.attr("y", 6)
-		.attr("dy", ".71em")
-		.style("text-anchor", "end")
-		.text("GDP");
-
-	var barWidth = width/gdp.length;
+	
+    var barWidth = width/gdp.length;
 
 	var bar = chart.selectAll("g")
 		.data(gdp)
 	  .enter().append("g")
-		.attr("transform", function(d, i) { return "translate(" + i*barWidth + ", 0)"; });
-
+		.attr("transform", function(d, i) { return "translate(" + barWidth + ", 0)"; });
+    // map data to chart
 	bar.append('rect')
-		.attr("y", function(d) { return y(d[1]);} )
-		.attr("x", function(d) { return x(d[0]);})
-		.attr("height", function(d) { return height - y(d[1]); })
+		.attr("y", function(d) { return yScale(d[1]);} )
+		.attr("x", function(d) { return xScale(d[0]);})
+		.attr("height", function(d) { return height - yScale(d[1]); })
 		.attr("width", barWidth)
 })
 
-
-function type(d) {
-	d.data[0] =  parseTime(d[0]);
-	return d;
-}
